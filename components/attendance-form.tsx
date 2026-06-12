@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle2, Clock, Calendar, Loader2, AlertCircle, Search, X } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { supabase } from "@/lib/supabase"
 
 interface AttendanceFormProps {
@@ -457,29 +456,40 @@ export function AttendanceForm({ token }: AttendanceFormProps) {
               </p>
             ) : (
               <div className="border border-border rounded-lg overflow-hidden max-h-72 overflow-y-auto">
-                {members.map((m, index) => (
-                  <div
-                    key={m.id}
-                    onClick={() => handleMemberToggle(m.id)}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50 ${
-                      selectedMemberIds.includes(m.id) ? "bg-primary/5" : "bg-card"
-                    } ${index < members.length - 1 ? "border-b border-border" : ""}`}
-                  >
-                    <Checkbox
-                      checked={selectedMemberIds.includes(m.id)}
-                      onCheckedChange={() => handleMemberToggle(m.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">
-                        {m.last_name}, {m.first_name}
-                      </span>
-                      {!selectedHouseholdId && (
-                        <p className="text-xs text-muted-foreground">{m.household_name}</p>
-                      )}
+                {members.map((m, index) => {
+                  const isSelected = selectedMemberIds.includes(m.id)
+                  return (
+                    <div
+                      key={m.id}
+                      onClick={() => handleMemberToggle(m.id)}
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50 ${
+                        isSelected ? "bg-primary/5" : "bg-card"
+                      } ${index < members.length - 1 ? "border-b border-border" : ""}`}
+                    >
+                      <div
+                        className={`w-4 h-4 shrink-0 rounded-[4px] border flex items-center justify-center transition-colors ${
+                          isSelected
+                            ? "bg-primary border-primary"
+                            : "border-input bg-transparent"
+                        }`}
+                      >
+                        {isSelected && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-primary-foreground">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium">
+                          {m.last_name}, {m.first_name}
+                        </span>
+                        {!selectedHouseholdId && (
+                          <p className="text-xs text-muted-foreground">{m.household_name}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 

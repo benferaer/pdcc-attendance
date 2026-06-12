@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { EventsList } from "@/components/events-list"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CalendarPlus, Calendar, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { UpcomingEvents } from "@/components/upcoming-events"
+import { MembersDropdown } from "@/components/members-dropdown"
+import { BottomNav } from "@/components/bottom-nav"
+import { EventsDropdown } from "@/components/events-dropdown"
 
 interface PrayerEvent {
   id: string
@@ -237,22 +240,31 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background pb-16 md:pb-0">
       {/* Header */}
       <header className="border-b border-border bg-card bg-red-600">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <Link href="/">
-                <img src="/PDCC-logo.png" alt="Prayer Group Logo" className="h-22 w-22" />
-              </Link>
+            <div className="flex items-center gap-4">
+              <div>
+                <Link href="/">
+                  <img src="/PDCC-logo.png" alt="Prayer Group Logo" className="h-16 w-16 md:h-22 md:w-22 object-contain cursor-default" />
+                </Link>
+              </div>
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold" style={{ fontFamily: '"Times New Roman", Times, serif', color: "#FFFFFF" }}>
+                  Pag-Ibig sa Diyos Catholic Community
+                </h1>
+              </div>
             </div>
-            <Link href="/events/create">
-              <Button className="gap-2 cursor-pointer">
-                <CalendarPlus className="w-4 h-4" />
-                Create an Event
-              </Button>
-            </Link>
+            <div className="flex gap-2 flex-wrap">
+              <div className="hidden md:block">
+                <EventsDropdown />
+              </div>
+              <div className="hidden md:block">
+                <MembersDropdown />
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -453,7 +465,7 @@ export default function HomePage() {
                           </div>
                           <div className="flex gap-2">
                             <Link href={`/events/${selectedEvent.event.id}/attend`}>
-                              <Button size="sm" className="gap-2">
+                              <Button size="sm" className="gap-2 cursor-pointer">
                                 <UserCheck className="w-4 h-4" />
                                 Check In
                               </Button>
@@ -505,8 +517,8 @@ export default function HomePage() {
                         {/* Footer link */}
                         {selectedEvent.attendance.length > 0 && (
                           <div className="px-5 py-3 border-t border-border">
-                            <Link href={`/events/${selectedEvent.event.id}/stats`} className="text-xs text-primary hover:underline">
-                              View full stats →
+                            <Link href={`/events/${selectedEvent.event.id}/checkins`} className="text-xs text-primary hover:underline">
+                              View checkins →
                             </Link>
                           </div>
                         )}
@@ -519,11 +531,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Events Summary List */}
-        <section>
-          <EventsList />
-        </section>
+        {/* Upcoming Events */}
+          <section>
+            <UpcomingEvents afterDate={toLocalDateString(weekEnd)} />
+          </section>
       </div>
+      <BottomNav />
     </main>
   )
 }

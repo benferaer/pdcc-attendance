@@ -185,7 +185,7 @@ export default function ManageMembersPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="gap-2">
+              <Button variant="ghost" size="sm" className="gap-2 cursor-pointer">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>

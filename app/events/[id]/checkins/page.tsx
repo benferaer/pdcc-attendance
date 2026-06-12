@@ -169,7 +169,7 @@ export default function CheckinsPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="gap-2">
+              <Button variant="ghost" size="sm" className="gap-2 cursor-pointer">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
@@ -179,7 +179,7 @@ export default function CheckinsPage() {
               <p className="text-sm text-muted-foreground mt-0.5">{meeting.meeting_date}</p>
             </div>
             <Link href={`/events/${id}/attend`}>
-              <Button className="gap-2 shrink-0">
+              <Button className="gap-2 shrink-0 cursor-pointer">
                 <UserCheck className="w-4 h-4" />
                 Check In
               </Button>

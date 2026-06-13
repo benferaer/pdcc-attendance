@@ -1,5 +1,7 @@
 import { AttendanceForm } from "@/components/attendance-form"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 
 function AttendanceContent({ id }: { id: string }) {
   return (
@@ -7,10 +9,19 @@ function AttendanceContent({ id }: { id: string }) {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
-          <div>
+          <div className="flex items-center gap-4">
             <Link href="/">
-              <img src="/PDCC-logo.png" alt="Prayer Group Logo" className="h-22 w-22" />
+              <Button variant="ghost" size="sm" className="gap-2 cursor-pointer">
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
             </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-primary">Check-In</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Register attendance for this event
+              </p>
+            </div>
           </div>
         </div>
       </header>

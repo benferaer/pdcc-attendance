@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Search, X, Pencil, Check, Loader2, Users, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, Search, X, Pencil, Check, Loader2, Users, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
@@ -164,6 +164,25 @@ export default function ManageMembersPage() {
   }
 
   const hasFilters = searchQuery || householdFilter !== "all" || statusFilter !== "all"
+
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const deleteMember = async (memberId: string) => {
+    const { error } = await supabase
+      .from("members")
+      .delete()
+      .eq("id", memberId)
+
+    if (error) {
+      console.error("Error deleting member:", error)
+      setSaveError("Failed to delete member. They may have attendance records linked.")
+      setDeletingId(null)
+      return
+    }
+
+    await loadData()
+    setDeletingId(null)
+  }
 
   if (isLoading) {
     return (
@@ -390,15 +409,52 @@ export default function ManageMembersPage() {
                             {m.householdName} Household
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startEdit(m)}
-                          className="gap-1.5 shrink-0 h-8 cursor-pointer"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
-                        </Button>
+
+                        {deletingId === m.id ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-muted-foreground">Delete?</span>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteMember(m.id)}
+                              className="h-8 cursor-pointer"
+                            >
+                              Confirm
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingId(null)}
+                              className="h-8 cursor-pointer"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEdit(m)}
+                              className="gap-1.5 h-8 cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Edit
+                            </Button>
+
+                            {/* DELETE FUNCTION - Comment out to disable*/}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingId(m.id)}
+                              className="h-8 w-8 p-0 cursor-pointer text-muted-foreground hover:text-destructive"
+                              aria-label="Delete member"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+
+                          </div>
+                        )}
                       </div>
                     )}
                   </li>

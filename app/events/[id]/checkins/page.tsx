@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, UserCheck, Clock, Users } from "lucide-react"
+import { ArrowLeft, UserCheck, Clock, Users, Download } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -136,6 +136,59 @@ export default function CheckinsPage() {
     ? Math.round((checkedIn.length / members.length) * 100)
     : 0
 
+  const downloadCSV = () => {
+    const rows = [
+      ["Last Name", "First Name", "Household", "Status", "Check-in Time"],
+      ...checkedIn.map((m) => [
+        m.lastName,
+        m.firstName,
+        m.householdName,
+        "Checked in",
+        m.checkedInAt
+          ? new Date(m.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "No timestamp",
+      ]),
+      ...notCheckedIn.map((m) => [
+        m.lastName,
+        m.firstName,
+        m.householdName,
+        "Not checked in",
+        "NA",
+      ]),
+    ]
+
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const str = String(cell)
+            // Escape quotes and wrap in quotes if contains comma, quote, or newline
+            if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+              return `"${str.replace(/"/g, '""')}"`
+            }
+            return str
+          })
+          .join(",")
+      )
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+
+    const safeTitle = (meeting?.title ?? "event")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+
+    link.href = url
+    link.download = `${safeTitle}-${meeting?.meeting_date ?? "attendance"}-attendance.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   if (isLoading) {
     return (
       <main className="min-h-screen bg-background">
@@ -169,7 +222,7 @@ export default function CheckinsPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="gap-2 cursor-pointer">
+              <Button variant="ghost" size="sm" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
@@ -178,8 +231,12 @@ export default function CheckinsPage() {
               <h1 className="text-xl font-bold text-primary truncate">{meeting.title}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{meeting.meeting_date}</p>
             </div>
+            <Button variant="outline" onClick={downloadCSV} className="gap-2 shrink-0 cursor-pointer">
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
             <Link href={`/events/${id}/attend`}>
-              <Button className="gap-2 shrink-0 cursor-pointer">
+              <Button className="gap-2 shrink-0">
                 <UserCheck className="w-4 h-4" />
                 Check In
               </Button>

@@ -29,6 +29,8 @@ interface Member {
   essDate: string | null
   sfsDate: string | null
   lfsDate: string | null
+  husbandPhone: string | null
+  wifePhone: string | null
 }
 
 interface Household {
@@ -53,6 +55,8 @@ interface EditState {
   essDate: string
   sfsDate: string
   lfsDate: string
+  husbandPhone: string
+  wifePhone: string
 }
 
 const DATE_FIELDS: { key: keyof EditState; label: string }[] = [
@@ -107,6 +111,8 @@ export default function ManageMembersPage() {
           ess_date,
           sfs_date,
           lfs_date,
+          husband_phone_number,
+          wife_phone_number,
           household:households!members_household_id_fkey (
             id,
             household_name
@@ -141,6 +147,8 @@ export default function ManageMembersPage() {
           essDate: m.ess_date,
           sfsDate: m.sfs_date,
           lfsDate: m.lfs_date,
+          husbandPhone: m.husband_phone_number,
+          wifePhone: m.wife_phone_number,
         }))
       )
     }
@@ -192,6 +200,8 @@ export default function ManageMembersPage() {
       essDate: m.essDate ?? "",
       sfsDate: m.sfsDate ?? "",
       lfsDate: m.lfsDate ?? "",
+      husbandPhone: m.husbandPhone ?? "",
+      wifePhone: m.wifePhone ?? "",
     })
   }
 
@@ -231,6 +241,8 @@ export default function ManageMembersPage() {
         ess_date: editState.essDate || null,
         sfs_date: editState.sfsDate || null,
         lfs_date: editState.lfsDate || null,
+        husband_phone_number: editState.husbandPhone.trim() || null,
+        wife_phone_number: editState.wifePhone.trim() || null,
       })
       .eq("id", memberId)
 
@@ -279,6 +291,8 @@ export default function ManageMembersPage() {
   const filledExtraCount = (m: Member) => {
     return [
       m.address,
+      m.husbandPhone,
+      m.wifePhone,
       m.husbandBirthday,
       m.wifeBirthday,
       m.weddingAnniversary,
@@ -477,7 +491,7 @@ export default function ManageMembersPage() {
                         <button
                           type="button"
                           onClick={() => setExtraFieldsOpen(!extraFieldsOpen)}
-                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full pt-1"
+                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full pt-1 cursor-pointer"
                         >
                           {extraFieldsOpen
                             ? <ChevronUp className="w-3.5 h-3.5" />
@@ -495,6 +509,26 @@ export default function ManageMembersPage() {
                                 onChange={(e) => setEditState({ ...editState, address: e.target.value })}
                                 className="h-8 text-sm"
                                 placeholder="Home address"
+                              />
+                            </div>
+
+                            {/* Husband and Wife Phone Numbers */}
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Husband's Phone Number</Label>
+                              <Input
+                                value={editState.husbandPhone}
+                                onChange={(e) => setEditState({ ...editState, husbandPhone: e.target.value })}
+                                className="h-8 text-sm"
+                                placeholder="Husband's phone number"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Wife's Phone Number</Label>
+                              <Input
+                                value={editState.wifePhone}
+                                onChange={(e) => setEditState({ ...editState, wifePhone: e.target.value })}
+                                className="h-8 text-sm"
+                                placeholder="Wife's phone number"
                               />
                             </div>
 
@@ -644,6 +678,18 @@ export default function ManageMembersPage() {
                               <div>
                                 <p className="text-xs font-medium text-muted-foreground">Address</p>
                                 <p className="text-sm text-foreground mt-0.5">{m.address}</p>
+                              </div>
+                            )}
+                            {m.husbandPhone && (
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Husband's Phone</p>
+                                <p className="text-sm text-foreground mt-0.5">{m.husbandPhone}</p>
+                              </div>
+                            )}
+                            {m.wifePhone && (
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Wife's Phone</p>
+                                <p className="text-sm text-foreground mt-0.5">{m.wifePhone}</p>
                               </div>
                             )}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">

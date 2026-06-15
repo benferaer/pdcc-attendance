@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Search, X, Pencil, Check, Loader2, Users, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
+import { ArrowLeft, Search, X, Pencil, Check, Loader2, Users, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
@@ -17,6 +17,18 @@ interface Member {
   active: boolean
   householdId: string | null
   householdName: string
+  address: string | null
+  husbandBirthday: string | null
+  wifeBirthday: string | null
+  weddingAnniversary: string | null
+  mewDate: string | null
+  lssDate: string | null
+  gssDate: string | null
+  icwDate: string | null
+  lcrDate: string | null
+  essDate: string | null
+  sfsDate: string | null
+  lfsDate: string | null
 }
 
 interface Household {
@@ -29,7 +41,33 @@ interface EditState {
   lastName: string
   active: boolean
   householdId: string
+  address: string
+  husbandBirthday: string
+  wifeBirthday: string
+  weddingAnniversary: string
+  mewDate: string
+  lssDate: string
+  gssDate: string
+  icwDate: string
+  lcrDate: string
+  essDate: string
+  sfsDate: string
+  lfsDate: string
 }
+
+const DATE_FIELDS: { key: keyof EditState; label: string }[] = [
+  { key: "husbandBirthday", label: "Husband Birthday" },
+  { key: "wifeBirthday", label: "Wife Birthday" },
+  { key: "weddingAnniversary", label: "Wedding Anniversary" },
+  { key: "mewDate", label: "MEW" },
+  { key: "lssDate", label: "LSS" },
+  { key: "gssDate", label: "GSS" },
+  { key: "icwDate", label: "ICW" },
+  { key: "lcrDate", label: "LCR" },
+  { key: "essDate", label: "ESS" },
+  { key: "sfsDate", label: "SFS" },
+  { key: "lfsDate", label: "LFS" },
+]
 
 export default function ManageMembersPage() {
   const [members, setMembers] = useState<Member[]>([])
@@ -43,6 +81,9 @@ export default function ManageMembersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [extraFieldsOpen, setExtraFieldsOpen] = useState(false)
+  const [viewingDetailsId, setViewingDetailsId] = useState<string | null>(null)
 
   const loadData = async () => {
     const [membersResult, householdsResult] = await Promise.all([
@@ -54,6 +95,18 @@ export default function ManageMembersPage() {
           last_name,
           active,
           household_id,
+          address,
+          husband_birthday,
+          wife_birthday,
+          wedding_anniversary,
+          mew_date,
+          lss_date,
+          gss_date,
+          icw_date,
+          lcr_date,
+          ess_date,
+          sfs_date,
+          lfs_date,
           household:households!members_household_id_fkey (
             id,
             household_name
@@ -76,6 +129,18 @@ export default function ManageMembersPage() {
           active: m.active,
           householdId: m.household_id,
           householdName: m.household?.household_name ?? "—",
+          address: m.address,
+          husbandBirthday: m.husband_birthday,
+          wifeBirthday: m.wife_birthday,
+          weddingAnniversary: m.wedding_anniversary,
+          mewDate: m.mew_date,
+          lssDate: m.lss_date,
+          gssDate: m.gss_date,
+          icwDate: m.icw_date,
+          lcrDate: m.lcr_date,
+          essDate: m.ess_date,
+          sfsDate: m.sfs_date,
+          lfsDate: m.lfs_date,
         }))
       )
     }
@@ -106,13 +171,27 @@ export default function ManageMembersPage() {
 
   const startEdit = (m: Member) => {
     setEditingId(m.id)
+    setViewingDetailsId(null)
+    setExtraFieldsOpen(false)
     setSaveError(null)
     setSaveSuccess(null)
     setEditState({
       firstName: m.firstName,
       lastName: m.lastName,
       active: m.active,
-      householdId: m.householdId ?? "",
+      householdId: m.householdId ?? "none",
+      address: m.address ?? "",
+      husbandBirthday: m.husbandBirthday ?? "",
+      wifeBirthday: m.wifeBirthday ?? "",
+      weddingAnniversary: m.weddingAnniversary ?? "",
+      mewDate: m.mewDate ?? "",
+      lssDate: m.lssDate ?? "",
+      gssDate: m.gssDate ?? "",
+      icwDate: m.icwDate ?? "",
+      lcrDate: m.lcrDate ?? "",
+      essDate: m.essDate ?? "",
+      sfsDate: m.sfsDate ?? "",
+      lfsDate: m.lfsDate ?? "",
     })
   }
 
@@ -120,6 +199,7 @@ export default function ManageMembersPage() {
     setEditingId(null)
     setEditState(null)
     setSaveError(null)
+    setExtraFieldsOpen(false)
   }
 
   const saveEdit = async (memberId: string) => {
@@ -138,7 +218,19 @@ export default function ManageMembersPage() {
         first_name: editState.firstName.trim(),
         last_name: editState.lastName.trim(),
         active: editState.active,
-        household_id: editState.householdId || null,
+        household_id: editState.householdId === "none" ? null : editState.householdId || null,
+        address: editState.address.trim() || null,
+        husband_birthday: editState.husbandBirthday || null,
+        wife_birthday: editState.wifeBirthday || null,
+        wedding_anniversary: editState.weddingAnniversary || null,
+        mew_date: editState.mewDate || null,
+        lss_date: editState.lssDate || null,
+        gss_date: editState.gssDate || null,
+        icw_date: editState.icwDate || null,
+        lcr_date: editState.lcrDate || null,
+        ess_date: editState.essDate || null,
+        sfs_date: editState.sfsDate || null,
+        lfs_date: editState.lfsDate || null,
       })
       .eq("id", memberId)
 
@@ -153,19 +245,10 @@ export default function ManageMembersPage() {
     setIsSaving(false)
     setEditingId(null)
     setEditState(null)
+    setExtraFieldsOpen(false)
     setSaveSuccess(memberId)
     setTimeout(() => setSaveSuccess(null), 3000)
   }
-
-  const clearFilters = () => {
-    setSearchQuery("")
-    setHouseholdFilter("all")
-    setStatusFilter("all")
-  }
-
-  const hasFilters = searchQuery || householdFilter !== "all" || statusFilter !== "all"
-
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const deleteMember = async (memberId: string) => {
     const { error } = await supabase
@@ -184,6 +267,32 @@ export default function ManageMembersPage() {
     setDeletingId(null)
   }
 
+  const clearFilters = () => {
+    setSearchQuery("")
+    setHouseholdFilter("all")
+    setStatusFilter("all")
+  }
+
+  const hasFilters = searchQuery || householdFilter !== "all" || statusFilter !== "all"
+
+  // Count how many extra fields are filled for a member
+  const filledExtraCount = (m: Member) => {
+    return [
+      m.address,
+      m.husbandBirthday,
+      m.wifeBirthday,
+      m.weddingAnniversary,
+      m.mewDate,
+      m.lssDate,
+      m.gssDate,
+      m.icwDate,
+      m.lcrDate,
+      m.essDate,
+      m.sfsDate,
+      m.lfsDate,
+    ].filter(Boolean).length
+  }
+
   if (isLoading) {
     return (
       <main className="min-h-screen bg-background">
@@ -199,7 +308,6 @@ export default function ManageMembersPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
@@ -215,6 +323,12 @@ export default function ManageMembersPage() {
                 {members.filter((m) => m.active).length} active · {members.filter((m) => !m.active).length} inactive
               </p>
             </div>
+            <Link href="/members/manage/new">
+              <Button className="gap-2 shrink-0">
+                <Users className="w-4 h-4" />
+                New Member
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -294,12 +408,14 @@ export default function ManageMembersPage() {
               {filtered.map((m) => {
                 const isEditing = editingId === m.id
                 const justSaved = saveSuccess === m.id
+                const extraCount = filledExtraCount(m)
 
                 return (
                   <li key={m.id} className={`px-5 py-4 transition-colors ${isEditing ? "bg-muted/30" : ""}`}>
                     {isEditing && editState ? (
                       /* Edit mode */
                       <div className="space-y-4">
+                        {/* Core fields */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <Label htmlFor={`first-${m.id}`} className="text-xs">First name</Label>
@@ -356,6 +472,51 @@ export default function ManageMembersPage() {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {/* Extra fields toggle */}
+                        <button
+                          type="button"
+                          onClick={() => setExtraFieldsOpen(!extraFieldsOpen)}
+                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full pt-1"
+                        >
+                          {extraFieldsOpen
+                            ? <ChevronUp className="w-3.5 h-3.5" />
+                            : <ChevronDown className="w-3.5 h-3.5" />}
+                          {extraFieldsOpen ? "Hide" : "Show"} additional details
+                        </button>
+
+                        {extraFieldsOpen && (
+                          <div className="space-y-4 pt-1 border-t border-border">
+                            {/* Address */}
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Address</Label>
+                              <Input
+                                value={editState.address}
+                                onChange={(e) => setEditState({ ...editState, address: e.target.value })}
+                                className="h-8 text-sm"
+                                placeholder="Home address"
+                              />
+                            </div>
+
+                            {/* Date fields — 2 per row */}
+                            <div className="grid grid-cols-2 gap-3">
+                              {DATE_FIELDS.map(({ key, label }) => (
+                                <div key={key} className="space-y-1.5">
+                                  <Label className="text-xs">{label}</Label>
+                                  <Input
+                                    type="date"
+                                    value={editState[key] as string}
+                                    onChange={(e) =>
+                                      setEditState({ ...editState, [key]: e.target.value })
+                                    }
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {saveError && (
                           <p className="text-xs text-destructive">{saveError}</p>
                         )}
@@ -386,73 +547,133 @@ export default function ManageMembersPage() {
                       </div>
                     ) : (
                       /* View mode */
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-foreground">
-                              {m.lastName}, {m.firstName}
-                            </span>
-                            {justSaved && (
-                              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                Saved
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-foreground">
+                                {m.lastName}, {m.firstName}
                               </span>
-                            )}
-                            <Badge
-                              variant={m.active ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {m.active ? "Active" : "Inactive"}
-                            </Badge>
+                              {justSaved && (
+                                <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                                  <Check className="w-3 h-3" />
+                                  Saved
+                                </span>
+                              )}
+                              <Badge
+                                variant={m.active ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {m.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {m.householdName} Household
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {m.householdName} Household
-                          </p>
+
+                          {deletingId === m.id ? (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-muted-foreground">Delete?</span>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteMember(m.id)}
+                                className="h-8 cursor-pointer"
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingId(null)}
+                                className="h-8 cursor-pointer"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 shrink-0">
+                              {extraCount > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setViewingDetailsId(
+                                      viewingDetailsId === m.id ? null : m.id
+                                    )
+                                  }
+                                  className="h-8 gap-1.5 cursor-pointer text-muted-foreground"
+                                >
+                                  {viewingDetailsId === m.id ? (
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  )}
+                                  View member details
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEdit(m)}
+                                className="gap-1.5 h-8 cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Edit
+                              </Button>
+                              
+                              {/* DELETE Button - Comment out to disable delete functionality */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingId(m.id)}
+                                className="h-8 w-8 p-0 cursor-pointer text-muted-foreground hover:text-destructive"
+                                aria-label="Delete member"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
 
-                        {deletingId === m.id ? (
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs text-muted-foreground">Delete?</span>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteMember(m.id)}
-                              className="h-8 cursor-pointer"
-                            >
-                              Confirm
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingId(null)}
-                              className="h-8 cursor-pointer"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => startEdit(m)}
-                              className="gap-1.5 h-8 cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Edit
-                            </Button>
-
-                            {/* DELETE FUNCTION - Comment out to disable*/}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingId(m.id)}
-                              className="h-8 w-8 p-0 cursor-pointer text-muted-foreground hover:text-destructive"
-                              aria-label="Delete member"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-
+                        {/* Expanded details view */}
+                        {viewingDetailsId === m.id && extraCount > 0 && (
+                          <div className="mt-2 pt-3 border-t border-border space-y-3">
+                            {m.address && (
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Address</p>
+                                <p className="text-sm text-foreground mt-0.5">{m.address}</p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+                              {[
+                                { label: "Husband Birthday", value: m.husbandBirthday },
+                                { label: "Wife Birthday", value: m.wifeBirthday },
+                                { label: "Wedding Anniversary", value: m.weddingAnniversary },
+                                { label: "MEW", value: m.mewDate },
+                                { label: "LSS", value: m.lssDate },
+                                { label: "GSS", value: m.gssDate },
+                                { label: "ICW", value: m.icwDate },
+                                { label: "LCR", value: m.lcrDate },
+                                { label: "ESS", value: m.essDate },
+                                { label: "SFS", value: m.sfsDate },
+                                { label: "LFS", value: m.lfsDate },
+                              ]
+                                .filter((f) => f.value)
+                                .map(({ label, value }) => (
+                                  <div key={label}>
+                                    <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                                    <p className="text-sm text-foreground mt-0.5">
+                                      {new Date(value! + "T00:00:00").toLocaleDateString("en-US", {
+                                        month: "long",
+                                        day: "numeric",
+                                        year: "numeric",
+                                      })}
+                                    </p>
+                                  </div>
+                                ))}
+                            </div>
                           </div>
                         )}
                       </div>

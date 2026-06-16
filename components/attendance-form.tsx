@@ -154,11 +154,16 @@ export function AttendanceForm({ token }: AttendanceFormProps) {
       setAlreadyCheckedInIds((attendanceData ?? []).map((a) => a.member_id))
 
       // Load uninvited members for walk-in search without filtering by household
+      const uninvitedFilter =
+        householdIds.length > 0
+          ? `household_id.is.null,household_id.not.in.(${householdIds.join(",")})`
+          : `household_id.is.null`
+
       const { data: uninvitedData } = await supabase
         .from("members")
         .select("id, first_name, last_name, household_id")
         .eq("active", true)
-        .not("household_id", "in", `(${householdIds.join(",")})`)
+        .or(uninvitedFilter)
         .order("last_name")
         .order("first_name")
 

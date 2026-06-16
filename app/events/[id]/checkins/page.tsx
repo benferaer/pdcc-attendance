@@ -411,9 +411,9 @@ export default function CheckinsPage() {
                 <p className="text-sm text-muted-foreground text-center">
                   Scan to check in and confirm attendance
                 </p>
-                <p className="text-xs text-muted-foreground/70 break-all text-center">
+                {/* <p className="text-xs text-muted-foreground/70 break-all text-center">
                   {selfCheckinUrl}
-                </p>
+                </p> */}
               </div>
             </div>
           )}

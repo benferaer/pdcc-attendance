@@ -499,7 +499,9 @@ export default function HomePage() {
                             </div>
                           ) : (
                             <ul className="divide-y divide-border">
-                              {selectedEvent.attendance.map((record) => (
+                              {selectedEvent.attendance
+                              .slice(0, 10)
+                              .map((record) => (
                                 <li key={record.id} className="px-5 py-3 flex items-center justify-between">
                                   <div>
                                     <p className="text-sm font-medium text-foreground">{record.memberName}</p>
@@ -518,12 +520,46 @@ export default function HomePage() {
                         </div>
 
                         {/* Footer link */}
-                        {selectedEvent.attendance.length > 0 && (
-                          <div className="px-5 py-3 border-t border-border">
+                        {/* {selectedEvent.attendance.length > 0 && (
+                          <div className="px-5 py-3 border-t border-border flex items-center justify-between">
                             <Link href={`/events/${selectedEvent.event.id}/checkins`} className="text-xs text-primary hover:underline">
                               View checkins →
                             </Link>
+                            {selectedEvent.attendance.length > 10 && (
+                              <div className="px-5 py-3 border-t border-border">
+                                <p className="text-xs text-muted-foreground text-gray-600" style={{ fontStyle: "italic" }}>
+                                  Showing 10 of {selectedEvent.attendance.length} check-ins. View all to see the complete list.
+                                </p>
+                              </div>
+                            )}
                           </div>
+                        )} */}
+                        {selectedEvent.attendance.length > 0 && (
+                          selectedEvent.attendance.length > 10 ? (
+                            <div className="px-5 py-3 border-t border-border">
+
+                              <Link
+                                href={`/events/${selectedEvent.event.id}/checkins`}
+                                className="group flex text-xs text-primary cursor-pointer items-center justify-between"
+                              >
+                                <div className="text-xs text-muted-foreground italic group-hover:no-underline">
+                                  Showing 10 of {selectedEvent.attendance.length} check-ins. View all to see the complete list.
+                                </div>
+                                <span className="text-xs text-primary group-hover:underline">
+                                View all →
+                                </span>
+                              </Link>
+                            </div>
+                          ) : (
+                            <div className="px-5 py-3 border-t border-border flex items-center justify-start">
+                              <Link
+                                href={`/events/${selectedEvent.event.id}/checkins`}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                View checkins →
+                              </Link>
+                            </div>
+                          )
                         )}
                       </div>
                     ) : null}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, UserCheck, Clock, Users, Download } from "lucide-react"
+import { ArrowLeft, UserCheck, Clock, Users, Download, X } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -30,6 +30,7 @@ export default function CheckinsPage() {
   const [meeting, setMeeting] = useState<MeetingInfo | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const loadData = async () => {
     // Load meeting info
@@ -136,6 +137,25 @@ export default function CheckinsPage() {
     ? Math.round((checkedIn.length / members.length) * 100)
     : 0
 
+  const removeAttendance = async (memberId: string) => {
+    if (!meeting) return
+
+    const { error } = await supabase
+      .from("attendance")
+      .delete()
+      .eq("meeting_id", meeting.id)
+      .eq("member_id", memberId)
+
+    if (error) {
+      console.error("Error removing attendance:", error)
+      setRemovingId(null)
+      return
+    }
+
+    await loadData()
+    setRemovingId(null)
+  }
+
   const downloadCSV = () => {
     const rows = [
       ["Last Name", "First Name", "Household", "Status", "Check-in Time"],
@@ -236,7 +256,7 @@ export default function CheckinsPage() {
               Export CSV
             </Button>
             <Link href={`/events/${id}/attend`}>
-              <Button className="gap-2 shrink-0">
+              <Button className="gap-2 shrink-0 cursor-pointer">
                 <UserCheck className="w-4 h-4" />
                 Check In
               </Button>
@@ -289,15 +309,44 @@ export default function CheckinsPage() {
                     </p>
                     <p className="text-xs text-muted-foreground">{m.householdName} Household</p>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {m.checkedInAt
-                      ? new Date(m.checkedInAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </div>
+
+                  {removingId === m.id ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground">Remove attendance?</span>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeAttendance(m.id)}
+                        className="h-7 text-xs cursor-pointer"
+                      >
+                        Confirm
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRemovingId(null)}
+                        className="h-7 text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {m.checkedInAt
+                          ? new Date(m.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                          : "—"}
+                      </div>
+                      <button
+                        onClick={() => setRemovingId(m.id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1 cursor-pointer"
+                        aria-label="Remove attendance"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

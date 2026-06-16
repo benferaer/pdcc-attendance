@@ -8,6 +8,7 @@ import { CheckCircle2, Clock, Calendar, Loader2, AlertCircle, Search, X } from "
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 interface AttendanceFormProps {
   token: string | null
@@ -51,6 +52,9 @@ export function AttendanceForm({ token }: AttendanceFormProps) {
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [alreadyCheckedInIds, setAlreadyCheckedInIds] = useState<string[]>([])
+  const [showWalkIn, setShowWalkIn] = useState(false)
+  const [walkInQuery, setWalkInQuery] = useState("")
+  const [uninvitedMembers, setUninvitedMembers] = useState<Member[]>([])
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -148,6 +152,27 @@ export function AttendanceForm({ token }: AttendanceFormProps) {
         .eq("meeting_id", token)
 
       setAlreadyCheckedInIds((attendanceData ?? []).map((a) => a.member_id))
+
+      // Load uninvited members for walk-in search without filtering by household
+      const { data: uninvitedData } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, household_id")
+        .eq("active", true)
+        .not("household_id", "in", `(${householdIds.join(",")})`)
+        .order("last_name")
+        .order("first_name")
+
+      if (uninvitedData) {
+        const householdNameMap: Record<string, string> = {}
+        householdList.forEach((h) => { householdNameMap[h.id] = h.household_name })
+
+        setUninvitedMembers(
+          uninvitedData.map((m) => ({
+            ...m,
+            household_name: householdNameMap[m.household_id] ?? "",
+          }))
+        )
+      }
 
       setIsLoading(false)
     }
@@ -497,6 +522,90 @@ export function AttendanceForm({ token }: AttendanceFormProps) {
               <p className="text-xs text-muted-foreground">
                 {selectedMemberIds.length} member{selectedMemberIds.length > 1 ? "s" : ""} selected
               </p>
+            )}
+          </div>
+
+          {/* Walk-in search — outside invited households */}
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowWalkIn(!showWalkIn)}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+            >
+              {showWalkIn ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              Can't find your name? Search all members
+            </button>
+
+            {showWalkIn && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search all members..."
+                    value={walkInQuery}
+                    onChange={(e) => setWalkInQuery(e.target.value)}
+                    className="pl-9 text-sm"
+                  />
+                </div>
+                {/* Results list — same checkbox style as main list */}
+                <div className="border border-border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                  {uninvitedMembers
+                    .filter((m) => {
+                      const fullName = `${m.first_name} ${m.last_name}`.toLowerCase()
+                      const q = walkInQuery.trim().toLowerCase()
+                      return (
+                        q &&
+                        fullName.includes(q) &&
+                        !alreadyCheckedInIds.includes(m.id) &&
+                        !members.some((mem) => mem.id === m.id)
+                      )
+                    })
+                    .map((m) => {
+                      const isSelected = selectedMemberIds.includes(m.id)
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => handleMemberToggle(m.id)}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50 ${
+                            isSelected ? "bg-primary/5" : "bg-card"
+                          }`}
+                        >
+                          <div
+                            className={`w-4 h-4 shrink-0 rounded-[4px] border flex items-center justify-center transition-colors ${
+                              isSelected
+                                ? "bg-primary border-primary"
+                                : "border-input bg-transparent"
+                            }`}
+                          >
+                            {isSelected && (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-primary-foreground">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium">
+                              {m.last_name}, {m.first_name}
+                            </span>
+                            <p className="text-xs text-muted-foreground">{m.household_name}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  {walkInQuery && uninvitedMembers.filter((m) => {
+                    const fullName = `${m.first_name} ${m.last_name}`.toLowerCase()
+                    const q = walkInQuery.trim().toLowerCase()
+                    return (
+                      q &&
+                      fullName.includes(q) &&
+                      !alreadyCheckedInIds.includes(m.id) &&
+                      !members.some((mem) => mem.id === m.id)
+                    )
+                  }).length === 0 && (
+                    <p className="text-sm text-muted-foreground p-4">No matching members found.</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

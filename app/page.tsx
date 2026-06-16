@@ -251,10 +251,13 @@ export default function HomePage() {
                   <img src="/PDCC-logo.png" alt="Prayer Group Logo" className="h-16 w-16 md:h-22 md:w-22 object-contain cursor-default" />
                 </Link>
               </div>
-              <div>
+              <div className="flex flex-col leading-tight">
                 <h1 className="text-xl md:text-3xl font-bold" style={{ fontFamily: '"Times New Roman", Times, serif', color: "#FFFFFF" }}>
                   Pag-Ibig sa Diyos Catholic Community
                 </h1>
+                <h2 className="text-lg md:text-[26px] font-semibold" style={{ fontFamily: '"Times New Roman", Times, serif', color: "#FFFFFF" }}>
+                  Holy Family Prayer Group
+                </h2>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">

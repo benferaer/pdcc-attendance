@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, UserCheck, Clock, Users, Download, X } from "lucide-react"
+import { ArrowLeft, UserCheck, Clock, Users, Download, X, QrCode } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { QRCodeSVG } from "qrcode.react"
 
 interface Member {
   id: string
@@ -31,6 +32,12 @@ export default function CheckinsPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [showQR, setShowQR] = useState(false)
+  const [origin, setOrigin] = useState("")
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   const loadData = async () => {
     // Load meeting info
@@ -182,7 +189,6 @@ export default function CheckinsPage() {
         row
           .map((cell) => {
             const str = String(cell)
-            // Escape quotes and wrap in quotes if contains comma, quote, or newline
             if (str.includes(",") || str.includes('"') || str.includes("\n")) {
               return `"${str.replace(/"/g, '""')}"`
             }
@@ -208,6 +214,8 @@ export default function CheckinsPage() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
+
+  const selfCheckinUrl = `${origin}/events/${id}/self-checkin`
 
   if (isLoading) {
     return (
@@ -242,7 +250,7 @@ export default function CheckinsPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="gap-2">
+              <Button variant="ghost" size="sm" className="gap-2 cursor-pointer">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
@@ -251,6 +259,14 @@ export default function CheckinsPage() {
               <h1 className="text-xl font-bold text-primary truncate">{meeting.title}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{meeting.meeting_date}</p>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowQR(!showQR)}
+              className="gap-2 shrink-0 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4" />
+              {showQR ? "Hide QR" : "Show QR"}
+            </Button>
             <Button variant="outline" onClick={downloadCSV} className="gap-2 shrink-0 cursor-pointer">
               <Download className="w-4 h-4" />
               Export CSV
@@ -265,121 +281,141 @@ export default function CheckinsPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-2xl">
-        {/* Summary bar */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Overall attendance</span>
+      <div className="container mx-auto px-4 py-6">
+        <div className={`flex flex-col lg:flex-row gap-6 mx-auto ${showQR ? "max-w-4xl" : "max-w-2xl"}`}>
+          {/* Main panel */}
+          <div className="flex-1 min-w-0 space-y-6">
+            {/* Summary bar */}
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Overall attendance</span>
+                </div>
+                <span className="text-sm font-semibold text-foreground">
+                  {checkedIn.length} / {members.length}
+                  <span className="text-muted-foreground font-normal ml-1">({pct}%)</span>
+                </span>
+              </div>
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
             </div>
-            <span className="text-sm font-semibold text-foreground">
-              {checkedIn.length} / {members.length}
-              <span className="text-muted-foreground font-normal ml-1">({pct}%)</span>
-            </span>
-          </div>
-          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Checked in */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-green-600" />
-              <h2 className="text-sm font-semibold text-foreground">Checked in</h2>
-            </div>
-            <Badge variant="secondary">{checkedIn.length}</Badge>
-          </div>
-          {checkedIn.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No check-ins yet
-            </div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {checkedIn.map((m) => (
-                <li key={m.id} className="px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {m.lastName}, {m.firstName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{m.householdName} Household</p>
-                  </div>
-
-                  {removingId === m.id ? (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground">Remove attendance?</span>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeAttendance(m.id)}
-                        className="h-7 text-xs cursor-pointer"
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRemovingId(null)}
-                        className="h-7 text-xs cursor-pointer"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {m.checkedInAt
-                          ? new Date(m.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                          : "—"}
+            {/* Checked in */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-green-600" />
+                  <h2 className="text-sm font-semibold text-foreground">Checked in</h2>
+                </div>
+                <Badge variant="secondary">{checkedIn.length}</Badge>
+              </div>
+              {checkedIn.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No check-ins yet
+                </div>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {checkedIn.map((m) => (
+                    <li key={m.id} className="px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {m.lastName}, {m.firstName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{m.householdName} Household</p>
                       </div>
-                      <button
-                        onClick={() => setRemovingId(m.id)}
-                        className="text-muted-foreground hover:text-destructive transition-colors p-1 cursor-pointer"
-                        aria-label="Remove attendance"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
-        {/* Not yet checked in */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-foreground">Not yet checked in</h2>
+                      {removingId === m.id ? (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">Remove attendance?</span>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeAttendance(m.id)}
+                            className="h-7 text-xs cursor-pointer"
+                          >
+                            Confirm
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRemovingId(null)}
+                            className="h-7 text-xs cursor-pointer"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {m.checkedInAt
+                              ? new Date(m.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                              : "—"}
+                          </div>
+                          <button
+                            onClick={() => setRemovingId(m.id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors p-1 cursor-pointer"
+                            aria-label="Remove attendance"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <Badge variant="secondary">{notCheckedIn.length}</Badge>
+
+            {/* Not yet checked in */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">Not yet checked in</h2>
+                </div>
+                <Badge variant="secondary">{notCheckedIn.length}</Badge>
+              </div>
+              {notCheckedIn.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  Everyone has checked in 🎉
+                </div>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {notCheckedIn.map((m) => (
+                    <li key={m.id} className="px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {m.lastName}, {m.firstName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{m.householdName} Household</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Pending</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
-          {notCheckedIn.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Everyone has checked in 🎉
+
+          {/* QR sidebar */}
+          {showQR && (
+            <div className="w-full lg:w-72 shrink-0">
+              <div className="bg-card border border-border rounded-xl p-5 flex flex-col items-center gap-3 lg:sticky lg:top-6">
+                <QRCodeSVG value={selfCheckinUrl} size={180} level="M" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Scan to check in and confirm attendance
+                </p>
+                <p className="text-xs text-muted-foreground/70 break-all text-center">
+                  {selfCheckinUrl}
+                </p>
+              </div>
             </div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {notCheckedIn.map((m) => (
-                <li key={m.id} className="px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {m.lastName}, {m.firstName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{m.householdName} Household</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">Pending</span>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       </div>

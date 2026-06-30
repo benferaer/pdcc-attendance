@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, UserCheck, Clock, Users, Download, X, QrCode } from "lucide-react"
+import { ArrowLeft, UserCheck, Clock, Users, Download, X, QrCode, Pencil } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -22,6 +22,8 @@ interface MeetingInfo {
   id: string
   title: string
   meeting_date: string
+  meeting_type: string
+  custom_event_type: string | null
 }
 
 export default function CheckinsPage() {
@@ -43,7 +45,7 @@ export default function CheckinsPage() {
     // Load meeting info
     const { data: meetingData, error: meetingError } = await supabase
       .from("meetings")
-      .select("id, title, meeting_date")
+      .select("id, title, meeting_date, meeting_type, custom_event_type")
       .eq("id", id)
       .single()
 
@@ -257,8 +259,19 @@ export default function CheckinsPage() {
             </Link>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-primary truncate">{meeting.title}</h1>
+              <h2 className="text-sm text-muted-foreground mt-0.5">
+                {meeting.meeting_type === "others" && meeting.custom_event_type
+                  ? meeting.custom_event_type
+                  : meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}
+              </h2>
               <p className="text-sm text-muted-foreground mt-0.5">{meeting.meeting_date}</p>
             </div>
+            <Link href={`/events/${id}/edit`}>
+              <Button variant="outline" className="gap-2 shrink-0 cursor-pointer">
+                <Pencil className="w-4 h-4" />
+                Edit Event
+              </Button>
+            </Link>
             <Button
               variant="outline"
               onClick={() => setShowQR(!showQR)}

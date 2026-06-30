@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Calendar, Users, BarChart3, Search, X } from "lucide-react"
+import { Calendar, Users, BarChart3, Search, X, Pencil } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
@@ -13,6 +13,8 @@ interface Event {
   name: string
   date: string
   createdAt: number
+  meeting_type: string
+  custom_event_type: string | null
 }
 
 export function EventsList() {
@@ -25,7 +27,7 @@ export function EventsList() {
     const loadEvents = async () => {
       const { data: meetingsData, error: meetingsError } = await supabase
         .from("meetings")
-        .select("id, title, meeting_date, created_at")
+        .select("id, title, meeting_date, created_at, meeting_type, custom_event_type")
         .order("created_at", { ascending: false })
 
       if (meetingsError) {
@@ -39,6 +41,8 @@ export function EventsList() {
           name: m.title ?? "Untitled Meeting",
           date: m.meeting_date,
           createdAt: new Date(m.created_at).getTime(),
+          meeting_type: m.meeting_type,
+          custom_event_type: m.custom_event_type,
         }))
       )
 
@@ -182,13 +186,18 @@ export function EventsList() {
                           {attended} attended
                         </span>
                       </div>
+                      <h4 className="text-sm text-muted-foreground mt-0.5">
+                        {event.meeting_type === "Others" && event.custom_event_type
+                          ? `Others: ${event.custom_event_type}`
+                          : event.meeting_type.charAt(0).toUpperCase() + event.meeting_type.slice(1)}
+                      </h4>
                       <p className="text-sm text-muted-foreground mt-0.5">{event.date}</p>
                     </div>
 
-                    <Link href={`/events/${event.id}/stats`} className="shrink-0">
-                      <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
-                        <BarChart3 className="w-4 h-4" />
-                        View Stats
+                    <Link href={`/events/${event.id}/edit`} className="shrink-0">
+                      <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto cursor-pointer">
+                        <Pencil className="w-4 h-4" />
+                        Edit Event
                       </Button>
                     </Link>
                   </div>

@@ -2,14 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Users, CheckCircle2, AlertCircle, Clock } from "lucide-react"
+import { ArrowLeft, Users, CheckCircle2, Download } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
-
-const TOTAL_EVENTS = 40
-const REQUIREMENT_PCT = 35
+import { REQUIREMENT_MEETING_TYPES, TOTAL_EVENTS, REQUIREMENT_PCT } from "@/lib/constants"
 
 interface MemberStat {
   id: string
@@ -40,7 +37,6 @@ export default function MembersStatsPage() {
     const loadData = async () => {
       const currentYear = 2026
 
-      // Load all active members with household
       const { data: membersData, error: membersError } = await supabase
         .from("members")
         .select(`
@@ -65,12 +61,12 @@ export default function MembersStatsPage() {
         return
       }
 
-      // Load all 2026 meetings
       const { data: meetingsData, error: meetingsError } = await supabase
         .from("meetings")
         .select("id, meeting_date")
         .gte("meeting_date", `${currentYear}-01-01`)
         .lte("meeting_date", `${currentYear}-12-31`)
+        .in("meeting_type", REQUIREMENT_MEETING_TYPES)
 
       if (meetingsError) {
         console.error("Error loading meetings:", meetingsError)
@@ -80,7 +76,6 @@ export default function MembersStatsPage() {
 
       const meetingIds = (meetingsData ?? []).map((m) => m.id)
 
-      // Load all attendance for 2026 meetings
       const { data: attendanceData, error: attendanceError } = meetingIds.length > 0
         ? await supabase
             .from("attendance")
@@ -94,22 +89,17 @@ export default function MembersStatsPage() {
         return
       }
 
-      // Count check-ins per member for 2026
       const checkinCounts: Record<string, number> = {}
       ;(attendanceData ?? []).forEach((a) => {
         checkinCounts[a.member_id] = (checkinCounts[a.member_id] || 0) + 1
       })
 
-      // Build member stats
       const memberStats: MemberStat[] = (membersData ?? []).map((m: any) => {
         const household = m.household
         const checkedInCount = checkinCounts[m.id] || 0
-
-        // Only add prior count if it's for the current year
         const priorCount = m.prior_attendance_year === currentYear
           ? (m.prior_attendance_count || 0)
           : 0
-
         const total = Math.min(checkedInCount + priorCount, TOTAL_EVENTS)
         const percentage = Math.round((total / TOTAL_EVENTS) * 100)
 
@@ -130,7 +120,6 @@ export default function MembersStatsPage() {
 
       setMembers(memberStats)
 
-      // Unique households from members
       const seen = new Set<string>()
       const uniqueHouseholds: Household[] = []
       ;(membersData ?? []).forEach((m: any) => {
@@ -155,6 +144,70 @@ export default function MembersStatsPage() {
 
   const meetingCount = filtered.filter((m) => m.meetsRequirement).length
   const totalCount = filtered.length
+  const requirementCount = Math.round(TOTAL_EVENTS * REQUIREMENT_PCT / 100)
+
+  const membersWithAttendance = filtered.filter((m) => m.total > 0)
+
+  const downloadCSV = () => {
+    if (membersWithAttendance.length === 0) return
+
+    const rows = [
+      [
+        "Last Name",
+        "First Name",
+        "Household",
+        "Prior Count",
+        "Check-in Count",
+        "Total Attendance",
+        `Out of (${TOTAL_EVENTS})`,
+        "Percentage",
+        "Meets Requirement",
+        "Remaining to Requirement",
+      ],
+      ...membersWithAttendance.map((m) => {
+        const remaining = Math.max(requirementCount - m.total, 0)
+        return [
+          m.lastName,
+          m.firstName,
+          m.householdName,
+          m.priorCount,
+          m.checkedInCount,
+          m.total,
+          TOTAL_EVENTS,
+          `${m.percentage}%`,
+          m.meetsRequirement ? "Yes" : "No",
+          m.meetsRequirement ? "Done" : remaining,
+        ]
+      }),
+    ]
+
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const str = String(cell)
+            if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+              return `"${str.replace(/"/g, '""')}"`
+            }
+            return str
+          })
+          .join(",")
+      )
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    const householdSuffix = selectedHouseholdId !== "all"
+      ? `-${households.find((h) => h.id === selectedHouseholdId)?.household_name.toLowerCase().replace(/[^a-z0-9]+/g, "-") ?? "household"}`
+      : ""
+    link.href = url
+    link.download = `member-attendance-stats-2026${householdSuffix}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
 
   if (isLoading) {
     return (
@@ -184,9 +237,18 @@ export default function MembersStatsPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-primary">Member Attendance</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                2026 · {REQUIREMENT_PCT}% requirement ({Math.round(TOTAL_EVENTS * REQUIREMENT_PCT / 100)} of {TOTAL_EVENTS} events)
+                2026 · {REQUIREMENT_PCT}% requirement ({requirementCount} of {TOTAL_EVENTS} events)
               </p>
             </div>
+            <Button
+              variant="outline"
+              onClick={downloadCSV}
+              disabled={membersWithAttendance.length === 0}
+              className="gap-2 shrink-0 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
           </div>
         </div>
       </header>
@@ -252,9 +314,14 @@ export default function MembersStatsPage() {
                               <CheckCircle2 className="w-3 h-3" />
                               Meets requirement
                             </span>
+                          ) : m.total === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              No attendance yet
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                            </span> 
+                              {Math.max(requirementCount - m.total, 0)} more to go
+                            </span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{m.householdName} Household</p>
@@ -271,7 +338,6 @@ export default function MembersStatsPage() {
                         className={`h-full rounded-full transition-all duration-500 ${barColor}`}
                         style={{ width: `${m.percentage}%` }}
                       />
-                      {/* 35% requirement marker */}
                       <div
                         className="absolute top-1/2 -translate-y-1/2 w-0.5 h-4 bg-foreground/30 rounded-full"
                         style={{ left: `${REQUIREMENT_PCT}%` }}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CalendarPlus, Calendar, UserCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarPlus, Calendar, UserCheck, ChevronLeft, ChevronRight, Pencil } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { UpcomingEvents } from "@/components/upcoming-events"
@@ -458,7 +458,9 @@ export default function HomePage() {
                         {/* Detail header */}
                         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-foreground">{selectedEvent.event.name}</h3>
+                            <Link href={`/events/${selectedEvent.event.id}/checkins`} className="text-primary hover:underline">
+                              <h3 className="font-semibold text-foreground">{selectedEvent.event.name}</h3>
+                            </Link>
                             <p className="text-sm text-muted-foreground mt-0.5">
                               {formatDayLabel(new Date(`${selectedEvent.event.date}T00:00:00`))}
                               {" · "}
@@ -467,6 +469,12 @@ export default function HomePage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
+                            <Link href={`/events/${selectedEvent.event.id}/edit`} className="shrink-0">
+                              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto cursor-pointer">
+                                <Pencil className="w-4 h-4" />
+                                Edit
+                              </Button>
+                            </Link>
                             <Link href={`/events/${selectedEvent.event.id}/attend`}>
                               <Button size="sm" className="gap-2 cursor-pointer">
                                 <UserCheck className="w-4 h-4" />
@@ -500,6 +508,7 @@ export default function HomePage() {
                           ) : (
                             <ul className="divide-y divide-border">
                               {selectedEvent.attendance
+                              .sort((a, b) => a.timestamp - b.timestamp)
                               .slice(0, 10)
                               .map((record) => (
                                 <li key={record.id} className="px-5 py-3 flex items-center justify-between">

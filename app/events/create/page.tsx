@@ -13,6 +13,7 @@ import { CalendarPlus, ArrowLeft, Check, CalendarIcon, Loader2 } from "lucide-re
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Household {
   id: string
@@ -35,6 +36,8 @@ export default function CreateEventPage() {
   const [households, setHouseholds] = useState<Household[]>([])
   const [isLoadingHouseholds, setIsLoadingHouseholds] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [eventType, setEventType] = useState("prayer_meeting")
+  const [customEventType, setCustomEventType] = useState("")
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -86,6 +89,15 @@ export default function CreateEventPage() {
     setIsLoadingHouseholds(false)
   }
 
+  const EVENT_TYPES = [
+    { value: "Prayer Meeting", label: "Prayer Meeting" },
+    { value: "Cluster Meeting", label: "Cluster Meeting" },
+    { value: "Household Meeting", label: "Household Meeting" },
+    { value: "Eucharistic Assembly", label: "Eucharistic Assembly" },
+    { value: "General Assembly", label: "General Assembly" },
+    { value: "Others", label: "Others" },
+  ]
+  
   const handleHouseholdToggle = (householdId: string) => {
     setSelectedHouseholds((prev) =>
       prev.includes(householdId)
@@ -105,7 +117,9 @@ export default function CreateEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!eventName || selectedHouseholds.length === 0 || !selectedDate) {
+    if (!eventName || !selectedDate || selectedHouseholds.length === 0) return
+    if (eventType === "Others" && !customEventType.trim()) {
+      setError("Please describe the event type.")
       return
     }
 
@@ -119,6 +133,8 @@ export default function CreateEventPage() {
   .insert({
     title: eventName,
     meeting_date: formattedDate,
+    meeting_type: eventType,
+    custom_event_type: eventType === "Others" ? customEventType.trim() : null,
   })
   .select("id")
   .single()
@@ -266,6 +282,34 @@ if (meetingError) {
                       onChange={(e) => setEventName(e.target.value)}
                       required
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Event Type</Label>
+                    <Select value={eventType} onValueChange={(val) => {
+                      setEventType(val)
+                      if (val !== "others") setCustomEventType("")
+                    }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select event type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EVENT_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {eventType === "Others" && (
+                      <Input
+                        placeholder="Describe the event type..."
+                        value={customEventType}
+                        onChange={(e) => setCustomEventType(e.target.value)}
+                        className="mt-2"
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-2">

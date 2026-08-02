@@ -274,7 +274,9 @@ export default function MembersStatsPage() {
 
     const year = parseInt(selectedReportYear)
     const isCurrentYear = year === CURRENT_YEAR
-    const cutoffDate = isCurrentYear ? new Date() : new Date(year, 11, 31) // if current year, cutoff is today; otherwise, end of year
+    const cutoffDate = isCurrentYear
+      ? new Date(new Date().setHours(23, 59, 59, 999))  // end of today local time
+      : new Date(year, 11, 31, 23, 59, 59, 999)
 
     const { data: membersData, error: membersError } = await supabase
       .from("members")
@@ -350,7 +352,10 @@ export default function MembersStatsPage() {
       if (!dates) return 0
       let count = 0
       dates.forEach((dateStr) => {
-        if (isWithinInterval(parseISO(dateStr), { start: weekStart, end: weekEnd })) count++
+        // Parse as local midnight to avoid UTC offset shifting the date
+        const [y, mo, d] = dateStr.split("-").map(Number)
+        const date = new Date(y, mo - 1, d)
+        if (isWithinInterval(date, { start: weekStart, end: weekEnd })) count++
       })
       return count
     }

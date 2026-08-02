@@ -170,7 +170,7 @@ export default function MembersStatsPage() {
           checkedInCount,
           total,
           percentage,
-          meetsRequirement: percentage >= REQUIREMENT_PCT,
+          meetsRequirement: Math.round((total / ytdMeetingCount) * 100) >= REQUIREMENT_PCT,
         }
       })
 
@@ -302,7 +302,7 @@ export default function MembersStatsPage() {
       .select("id, meeting_date")
       .gte("meeting_date", `${year}-01-01`)
       .lte("meeting_date", `${year}-12-31`)
-      .eq("meeting_type", "Prayer Meeting")
+      .in("meeting_type", REQUIREMENT_MEETING_TYPES)
 
     if (meetingsError) {
       console.error("Error loading meetings:", meetingsError)
@@ -619,7 +619,7 @@ export default function MembersStatsPage() {
                   <p className="font-medium text-foreground">Includes:</p>
                   <ul className="list-disc list-inside space-y-0.5">
                     <li>All active members</li>
-                    <li>Prayer Meeting attendance only</li>
+                    <li>Qualifying meeting types only - {REQUIREMENT_MEETING_TYPES.join(", ")}</li>
                     <li>Grouped by Sun–Sat week within each month</li>
                     <li>Year-to-date total per member</li>
                   </ul>

@@ -126,25 +126,36 @@ export default function MembersStatsPage() {
 
       const meetingIds = (meetingsData ?? []).map((m) => m.id)
 
-      const { data: attendanceData, error: attendanceError } = meetingIds.length > 0
-        ? await supabase
+      let attendanceData: { member_id: string; meeting_id: string }[] = []
+
+      if (meetingIds.length > 0) {
+        let page = 0
+        const pageSize = 1000
+        while (true) {
+          const { data, error } = await supabase
             .from("attendance")
             .select("member_id, meeting_id")
             .in("meeting_id", meetingIds)
-        : { data: [], error: null }
+            .range(page * pageSize, (page + 1) * pageSize - 1)
 
-      if (attendanceError) {
-        console.error("Error loading attendance:", attendanceError)
-        setIsLoading(false)
-        return
+          if (error) {
+            console.error("Error loading attendance:", error)
+            setIsLoading(false)
+            return
+          }
+
+          if (!data || data.length === 0) break
+          attendanceData = [...attendanceData, ...data]
+          if (data.length < pageSize) break
+          page++
+        }
       }
 
       const ytdMeetingCount = (meetingsData ?? []).length
-
       setYTDMeetingCount(ytdMeetingCount)
 
       const checkinCounts: Record<string, number> = {}
-      ;(attendanceData ?? []).forEach((a) => {
+      attendanceData.forEach((a) => {
         checkinCounts[a.member_id] = (checkinCounts[a.member_id] || 0) + 1
       })
 
@@ -170,7 +181,7 @@ export default function MembersStatsPage() {
           checkedInCount,
           total,
           percentage,
-          meetsRequirement: Math.round((total / ytdMeetingCount) * 100) >= REQUIREMENT_PCT,
+          meetsRequirement: Math.round((total / TOTAL_EVENTS) * 100) >= REQUIREMENT_PCT,
         }
       })
 
@@ -275,7 +286,7 @@ export default function MembersStatsPage() {
     const year = parseInt(selectedReportYear)
     const isCurrentYear = year === CURRENT_YEAR
     const cutoffDate = isCurrentYear
-      ? new Date(new Date().setHours(23, 59, 59, 999))  // end of today local time
+      ? new Date(new Date().setHours(23, 59, 59, 999))
       : new Date(year, 11, 31, 23, 59, 59, 999)
 
     const { data: membersData, error: membersError } = await supabase
@@ -314,24 +325,36 @@ export default function MembersStatsPage() {
 
     const meetingIds = (meetingsData ?? []).map((m) => m.id)
 
-    const { data: attendanceData, error: attendanceError } = meetingIds.length > 0
-      ? await supabase
+    let attendanceData: { member_id: string; meeting_id: string }[] = []
+
+    if (meetingIds.length > 0) {
+      let page = 0
+      const pageSize = 1000
+      while (true) {
+        const { data, error } = await supabase
           .from("attendance")
           .select("member_id, meeting_id")
           .in("meeting_id", meetingIds)
-      : { data: [], error: null }
+          .range(page * pageSize, (page + 1) * pageSize - 1)
 
-    if (attendanceError) {
-      console.error("Error loading attendance:", attendanceError)
-      setIsGeneratingMonthly(false)
-      return
+        if (error) {
+          console.error("Error loading attendance:", error)
+          setIsGeneratingMonthly(false)
+          return
+        }
+
+        if (!data || data.length === 0) break
+        attendanceData = [...attendanceData, ...data]
+        if (data.length < pageSize) break
+        page++
+      }
     }
 
     const meetingDateMap: Record<string, string> = {}
     ;(meetingsData ?? []).forEach((m) => { meetingDateMap[m.id] = m.meeting_date })
 
     const memberAttendanceDates: Record<string, Set<string>> = {}
-    ;(attendanceData ?? []).forEach((a) => {
+    attendanceData.forEach((a) => {
       const date = meetingDateMap[a.meeting_id]
       if (!date) return
       if (!memberAttendanceDates[a.member_id]) {
@@ -352,7 +375,6 @@ export default function MembersStatsPage() {
       if (!dates) return 0
       let count = 0
       dates.forEach((dateStr) => {
-        // Parse as local midnight to avoid UTC offset shifting the date
         const [y, mo, d] = dateStr.split("-").map(Number)
         const date = new Date(y, mo - 1, d)
         if (isWithinInterval(date, { start: weekStart, end: weekEnd })) count++

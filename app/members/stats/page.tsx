@@ -35,8 +35,8 @@ function getWeeksForMonth(year: number, monthIndex: number, cutoff: Date) {
     const displayEnd = weekEnd > effectiveLastDay ? effectiveLastDay : weekEnd
     weeks.push({
       label: `${format(displayStart, "MMM d")}-${format(displayEnd, "d")}`,
-      start: weekStart,
-      end: weekEnd,
+      start: displayStart,
+      end: displayEnd,
     })
     current = addWeeks(current, 1)
   }
